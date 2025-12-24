@@ -6,26 +6,38 @@ use App\Repositories\UserRepository;
 use App\Http\Controllers\Controller;
 use App\Repositories\StatusRepository;
 use Illuminate\Http\Request;
+use App\Http\Requests\StatusRequest;
+use App\Services\StatusService;
 
 class StatusController extends Controller
 {
-    public function __construct(StatusRepository $statusRepo, UserRepository $userRepository)
+    protected $statusService;
+    public function __construct(StatusRepository $statusRepo, UserRepository $userRepository, StatusService $statusService)
     {
+        $this->service = $statusService;
         parent::__construct($statusRepo, $userRepository);
     }
 
-    public function store(Request $request)
+    public function store(StatusRequest $request)
     {
-        $validated_data = $request->validate($this->repo->rules());
-        $validated_data['is_check_due'] = $request->input("is_check_due") ?? 0;
-        $modal = $this->repo->find($request->input('id'));
+        $validatedData = $request->validated();
+        $validatedData['is_check_due'] = $request->input("is_check_due") ?? 0;
 
-        if ($modal) {
-            $this->repo->update($request->input('id'), $validated_data);
-        } else {
-            $this->repo->create($validated_data);
-        }
+        $new_status = $this->service->create($validatedData);
 
-        return redirect()->route($this->repo->getBaseUrl() . ".index");
+        $baseUrl = $this->service->getBaseUrl();        
+        return redirect()->route($baseUrl . ".index");
     }
+
+    public function update($id ,StatusRequest $request)
+    {
+        $validatedData = $request->validated();
+        $validatedData['is_check_due'] = $request->input("is_check_due") ?? 0;
+
+        $new_status = $this->service->update($id, $validatedData);
+
+        $baseUrl = $this->service->getBaseUrl();        
+        return redirect()->route($baseUrl . ".index");
+    }
+
 }

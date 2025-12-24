@@ -22,9 +22,9 @@ class StatusRepository extends BaseRepository
     public function rules()
     {
         return [
-            "status_name" => ["required", "string", "max:255"],
-            "color" => ["required"],
-            "is_check_due" => []
+            // "status_name" => ["required", "string", "max:255"],
+            // "color" => ["required"],
+            // "is_check_due" => []
         ];
     }
 }

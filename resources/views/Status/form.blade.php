@@ -23,7 +23,10 @@
                         <div class="card p-3">
                             <div class="card-inner">
                                 <h4 class="title nk-block-title mb-4">Status</h4>
-                                <form action="{{route('admin.status.store')}}" class="gy-3" method="POST" enctype="multipart/form-data">
+                                    <form action="{{ $modal->id ? route('admin.status.update',$modal->id) : route('admin.status.store') }}"
+                                        class="gy-3"
+                                        method="POST"
+                                        enctype="multipart/form-data">
                                     @csrf
                                     <input type="hidden" name="id" value="{{$modal->id}}">
                                     <input type="hidden" name="user_id" value="{{Auth::user()->id}}">
