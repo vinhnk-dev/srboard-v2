@@ -91,20 +91,6 @@ class Controller extends BaseController
         return redirect()->back()->withErrors(['error' => 'Can not forces deleted, maybe it is being used by another object ! ']);
     }
 
-    public function store(Request $request)
-    {
-        $validated_data = $request->validate($this->repo->rules());
-
-        $modal = $this->repo->find($request->input('id'));
-
-        if ($modal) {
-            $this->repo->update($request->input('id'), $validated_data);
-        } else {
-            $this->repo->create($validated_data);
-        }
-
-        return redirect()->route($this->repo->getBaseUrl() . ".index");
-    }
 
     protected function pdf()
     {
