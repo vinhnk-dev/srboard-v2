@@ -3,10 +3,11 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Status extends BaseModel
 {
-    use SoftDeletes;
+    use SoftDeletes; use HasFactory;
     protected $fillable = [
         'status_name',
         'color',
