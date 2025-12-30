@@ -8,19 +8,24 @@ use App\Models\Group;
 use App\Repositories\GroupRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\ProjectRepository;
+use App\Services\GroupService;
+use App\Http\Requests\GroupRequest;
 
 class GroupController extends Controller
 {
     protected $userRepository;
     protected $projectRepository;
+    protected $groupService;
 
     public function __construct(
         GroupRepository $groupRepository,
         UserRepository $userRepository,
-        ProjectRepository $projectRepository
+        ProjectRepository $projectRepository,
+        GroupService $groupService
     ) {
         parent::__construct($groupRepository, $userRepository);
 
+        $this->groupService = $groupService;
         $this->userRepository = $userRepository;
         $this->projectRepository = $projectRepository;
     }
@@ -34,8 +39,8 @@ class GroupController extends Controller
 
     public function edit($id)
     {
-        $this->context['user'] = $this->repo->getUsersOfGroup($id);
-        $this->context['project'] = $this->repo->getProjectsOfGroup($id);
+        $this->context['user'] = $this->groupService->getUsersOfGroup($id);
+        $this->context['project'] = $this->groupService->getProjectsOfGroup($id);
 
         return parent::edit($id);
     }
@@ -47,31 +52,20 @@ class GroupController extends Controller
 
     public function forcesDelete($id)
     {
-        $this->context['group'] = $this->repo->forceDeleteRelationship($id);
+        $this->context['group'] = $this->groupService->forceDeleteRelationship($id);
         return parent::forcesDelete($id);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(GroupRequest $request)
     {
         $inGroup =  request()->get('inGroup');
+        $validatedData = $request->validated();
 
-        $data = $request->validate([
-            "group_name" => ["required"],
-            "user_id" => [],
-            "user_group_id" => [],
-            "group_assign_id" => [],
-        ]);
+        $group = $this->groupService->create($validatedData);
 
-        // if have id -> update
-        if ($request->input('id')) {
-            $group = $this->repo->update($request->input('id'), $data);
-        } else {
-            // create new
-            $group = $this->repo->store($data);
-        }
         if ($inGroup) {
             return redirect()->route("admin.group.show", $request->input('id'));
         } else {
@@ -79,11 +73,25 @@ class GroupController extends Controller
         }
     }
 
+    public function update($id, GroupRequest $request)
+    {
+        $inGroup =  request()->get('inGroup');
+        
+        $validatedData = $request->validated();
+
+        $group = $this->groupService->update($id, $validatedData);
+         if ($inGroup) {
+            return redirect()->route("admin.group.show", $id);
+        } else {
+            return redirect()->route("admin.group.index");
+        }
+    }
+
     public function show($groupId)
     {
-        $this->context['group'] = $this->repo->find($groupId);
-        $this->context['users'] = $this->repo->listMember($groupId);
-        $this->context['project'] = $this->repo->listProject($groupId);
+        $this->context['group'] = $this->groupService->find($groupId);
+        $this->context['users'] = $this->groupService->listMember($groupId);
+        $this->context['project'] = $this->groupService->listProjectFromGroup($groupId);
         return parent::customView("Group.view");
     }
 }

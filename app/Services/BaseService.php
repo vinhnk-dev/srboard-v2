@@ -39,6 +39,11 @@ class BaseService implements BaseServiceInterface
         return $this->repository->forcesDelete($id);
     }
 
+    public function find($id)
+    {
+        return $this->repository->find($id);
+    }
+
     public function pdf()
     {
         $data = TableView::render_normal($this->repo, $this->context);

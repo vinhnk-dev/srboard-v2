@@ -8,4 +8,5 @@ interface BaseServiceInterface
     public function delete($id);
     public function restore($id);
     public function forcesDelete($id);
+    public function find($id);
 }

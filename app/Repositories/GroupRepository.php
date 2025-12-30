@@ -176,59 +176,56 @@ class GroupRepository extends BaseRepository
         return $projects;
     }
 
-    public function store(array $data)
+    public function create($data = [])
     {
-        $group = $this->model->create([
+        return $this->model->create([
             "group_name" => $data["group_name"],
             "user_id" => $data["user_id"]
         ]);
 
-        if ($group->id && !empty($data["user_group_id"])) {
-            foreach ($data["user_group_id"] as $userId) {
-                $userGroupData = [
-                    "group_id" => $group->id,
-                    "user_id" => $userId,
-                ];
-                UserGroup::create($userGroupData);
-            }
-        }
-
-        if ($group->id && !empty($data["group_assign_id"])) {
-            foreach ($data["group_assign_id"] as $projectId) {
-                $groupAssignmentData = [
-                    "group_id" => $group->id,
-                    "project_id" => $projectId,
-                ];
-                GroupAssignment::create($groupAssignmentData);
-            }
-        }
-
-        return $group;
     }
+
+     public function attachUsersToGroup(int $groupId, array $userIds): void
+    {
+        foreach ($userIds as $userId) {
+            UserGroup::create([
+                'group_id' => $groupId,
+                'user_id'  => $userId,
+            ]);
+        }
+    }
+
+    public function assignProjectsToGroup(int $groupId, array $projectIds): void
+    {
+        foreach ($projectIds as $projectId) {
+            GroupAssignment::create([
+                'group_id'   => $groupId,
+                'project_id' => $projectId,
+            ]);
+        }
+    }
+
+
     public function update($id, $data = [])
     {
         $group = $this->model->find($id);
-
-        if ($group) {
-            $group->update($data);
-            $this->updateUserGroupLinks($group, $data);
-            $this->updateGroupAssignmentLinks($group, $data);
-
-            return $group;
+        if (!$group) {
+            return null;
         }
+        $group->update($data);
+        return $group;
 
-        return null;
     }
 
-    private function updateUserGroupLinks($group, $data)
+    public function updateUserGroupLinks($id, $userGroupIds)
     {
-        $userGroupIds = $data["user_group_id"];
-        UserGroup::where('group_id', $group->id)->delete();
+        // $userGroupIds = $data["user_group_id"];
+        UserGroup::where('group_id', $id)->delete();
         if (!empty($userGroupIds)) {
             $userGroupData = [];
             foreach ($userGroupIds as $userId) {
                 $userGroupData[] = [
-                    'group_id' => $group->id,
+                    'group_id' => $id,
                     'user_id' => $userId,
                 ];
             }
@@ -236,15 +233,15 @@ class GroupRepository extends BaseRepository
         }
     }
 
-    private function updateGroupAssignmentLinks($group, $data)
+    public function updateGroupAssignmentLinks($id, $groupAssignmentIds)
     {
-        GroupAssignment::where('group_id', $group->id)->delete();
-        if (!empty($data["group_assign_id"])){
-            $groupAssignmentIds = $data["group_assign_id"];
+        GroupAssignment::where('group_id', $id)->delete();
+        if (!empty($groupAssignmentIds)){
+            // $groupAssignmentIds = $data["group_assign_id"];
             $groupAssignmentData = [];
             foreach ($groupAssignmentIds as $projectId) {
                 $groupAssignmentData[] = [
-                    'group_id' => $group->id,
+                    'group_id' => $id,
                     'project_id' => $projectId,
                 ];
             }
