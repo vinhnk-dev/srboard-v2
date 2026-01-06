@@ -23,8 +23,11 @@
                         <div class="card p-3">
                             <div class="card-inner">
                                 <h4 class="title nk-block-title mb-5">PROJECT</h4>
-                                <form id="edit_project_form" class="gy-3" method="POST" enctype="multipart/form-data"
-                                        action="{{route ('admin.projects.store')}}">
+                               <form action="{{ $modal->id ? route('admin.projects.update',$modal->id) : route('admin.projects.store') }}"
+                                        class="gy-3"
+                                        method="POST"
+                                        enctype="multipart/form-data">
+                                        @csrf
                                     {{-- <input type="hidden" name="groupId" value="{{$groupId}}" /> --}}
                                     <input type="hidden" name="id" value="{{$modal->id}}">
                                     @csrf

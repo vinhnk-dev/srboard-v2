@@ -13,6 +13,11 @@ class BaseService implements BaseServiceInterface
     {
         $this->repository = $repository;
     }
+
+    public function getAll()
+    {
+        return $this->repository->all();
+    }
    
     public function create(array $data)
     {
