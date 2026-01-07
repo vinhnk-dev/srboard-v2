@@ -223,4 +223,15 @@ class ProjectRepository extends BaseRepository
             $status->forceDelete();
         }
     }
+
+    public function existsByCode(string $code, ?int $exceptId = null): bool
+    {
+        $query = Project::where('project_code', $code);
+        
+        if ($exceptId) {
+            $query->where('id', '!=', $exceptId);
+        }
+        
+        return $query->exists();
+    }
 }

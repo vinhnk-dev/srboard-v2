@@ -117,4 +117,9 @@ class ProjectService extends BaseService
         return $this->projectRepository->forcesDeleteRelationship($id);
     }
 
+    public function isProjectCodeExists(string $code, ?int $exceptId = null): bool
+    {
+        return $this->projectRepo->existsByCode($code, $exceptId);
+    }
+
 }

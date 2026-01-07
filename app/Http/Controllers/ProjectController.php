@@ -4,10 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Repositories\UserRepository;
 use Auth;
-// use app\Models\Config;
 use App\Http\Controllers\Controller;
-use App\Models\ProjectStatus;
-use App\Models\Project;
 use App\Repositories\ProjectRepository;
 use App\Repositories\GroupRepository;
 use App\Repositories\StatusRepository;
@@ -61,38 +58,32 @@ class ProjectController extends Controller
         return parent::edit($id);
     }
 
-    public function checkProjectCode(Request $request)
+    public function checkProjectCode(Request $request): JsonResponse
     {
-        return response()->json(['exists' => Project::where('project_code', $request->input('project_code'))->exists()]);
+        $code = $request->input('project_code');
+        $exceptId = $request->input('except_id');
+        
+        if (empty($code)) {
+            return response()->json(['exists' => false]);
+        }
+        
+        $exists = $this->projectService->isProjectCodeExists($code, $exceptId);
+        return response()->json(['exists' => $exists]);
     }
 
     public function store(ProjectRequest $request)
     {
         $validatedData = $request->validated();
         $this->projectService->create($validatedData);
-
-        // Check the condition, if from group => return to group else return to edit group
-        if ($request->groupId) {
-            return redirect()->route("admin.group.show", ["id" => $request->groupId]);
-        }
-
-        return redirect()
-            ->route("admin.projects.index")
-            ->with("status", "Update Complete !");
+        return $this->redirectAfterSave($request, "Project created successfully!");
     }
 
     public function update($id, ProjectRequest $request)
     {
-         $validatedData = $request->validated();
-        $project = $this->projectService->update($id, $validatedData);
+        $validatedData = $request->validated();
+        $this->projectService->update($id, $validatedData);
 
-         if ($request->groupId) {
-            return redirect()->route("admin.group.show", ["id" => $request->groupId]);
-        }
-
-        return redirect()
-            ->route("admin.projects.index")
-            ->with("status", "Update Complete !");
+       return $this->redirectAfterSave($request, "Project updated successfully!");
     }
 
     public function delete($id)
@@ -104,5 +95,18 @@ class ProjectController extends Controller
     {
         $this->context['project'] = $this->projectService->forcesDeleteRelationship($id);
         return parent::forcesDelete($id);
+    }
+
+    private function redirectAfterSave(Request $request, string $message)
+    {
+        if ($groupId = $request->input('groupId')) {
+            return redirect()
+                ->route("admin.group.show", ["id" => $groupId])
+                ->with("status", $message);
+        }
+
+        return redirect()
+            ->route("admin.projects.index")
+            ->with("status", $message);
     }
 }
