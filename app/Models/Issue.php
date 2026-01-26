@@ -33,13 +33,19 @@ class Issue extends BaseModel
             return render_color($modal->status_name, $modal->color, 'badge badge-sm badge-dot has-bg');
         };
         $this->formatCell['assigned'] = function ($modal) {
-            return render_stringList($modal->repo->issueAssigned($modal->id, true), 'w-200px');
+            $assignedUsers = $modal->repo->issueAssigned($modal->id);
+
+            $names = $assignedUsers
+                ->pluck('name')
+                ->implode(', ');
+
+            return render_stringList($names, 'w-200px');
         };
         $this->formatCell['created_at'] = function ($modal) {
             return render_datetime($modal->created_at);
         };
         $this->formatCell['picture_url'] = function ($modal) {
-            return render_pictures($modal->repo->issueImages($modal->id), $modal->id);
+            return render_pictures($modal->repo->getPitures($modal->id), $modal->id);
         };
         $this->formatCell['due_date'] = function ($modal) {
             $textClass = '';
@@ -94,94 +100,29 @@ class Issue extends BaseModel
         return $textClass;
     }
 
-    public function sendCreatedMail()
-    {
-        $users = array_merge($this->reporters, $this->assignments);
-        foreach ($users as $user) {
-            $title = 'You has been assigned as';
-            if (in_array($user, $this->reporters) && in_array($user, $this->assignments)) {
-                $title .= ' Reporter and Developer ';
-            } else if (in_array($user, $this->reporters)) {
-                $title .= ' Reporter ';
-            } else if (in_array($user, $this->assignments)) {
-                $title .= ' Developer ';
-            }
 
-            $issue_url = env("APP_URL") . '/projects/' . $this->project_id . '/issues/' . $this->id . '/view';
-            $head = '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> ' . $title .
-                '(<a href="' . $issue_url . '">Visit issue</a>)</p>';
-            $head .= '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> Issue code: ' . $this->project->project_code . '-' . $this->id . '</p>';
-            $head .= '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> Issue title: ' . $this->title . '</p>';
-            send_mail(3, "[" . env("APP_NAME") . "] New issue created: " . $this->title, $head);
-        }
-    }
+    // public function sendCommentMail($comment)
+    // {
+    //     $users = array_merge($this->reporters, $this->assignments);
+    //     foreach ($users as $user) {
+    //         $title = 'You has been assigned as';
+    //         if (in_array($user, $this->reporters) && in_array($user, $this->assignments)) {
+    //             $title .= ' Reporter and Developer ';
+    //         } else if (in_array($user, $this->reporters)) {
+    //             $title .= ' Reporter ';
+    //         } else if (in_array($user, $this->assignments)) {
+    //             $title .= ' Developer ';
+    //         }
 
-    public function sendUpdatedMail($content)
-    {
-        $users = array_merge($this->reporters, $this->assignments);
-        foreach ($users as $user) {
-            $title = 'You has been assigned as';
-            if (in_array($user, $this->reporters) && in_array($user, $this->assignments)) {
-                $title .= ' Reporter and Developer ';
-            } else if (in_array($user, $this->reporters)) {
-                $title .= ' Reporter ';
-            } else if (in_array($user, $this->assignments)) {
-                $title .= ' Developer ';
-            }
+    //         $issue_url = env("APP_URL") . '/projects/' . $this->project_id . '/issues/' . $this->id . '/view';
+    //         $head = '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> ' . $title .
+    //             '(<a href="' . $issue_url . '">Visit issue</a>)</p>';
+    //         $head .= '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> Issue code: ' . $this->project->project_code . '-' . $this->id . '</p>';
+    //         $head .= '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> Issue title: ' . $this->title . '</p>';
+    //         send_mail(3, "[" . env("APP_NAME") . "] New issue created: " . $this->title, $head);
+    //     }
+    // }
 
-            $issue_url = env("APP_URL") . '/projects/' . $this->project_id . '/issues/' . $this->id . '/view';
-            $head = '<p style="font-size:12pt;color:#333; padding: 0; margin: 0; width:100%; font-weight: bold;"> ' . $title .
-                '(<a href="' . $issue_url . '">Visit issue</a>)</p>';
-            send_mail(3, "[" . env("APP_NAME") . "] Issue updated: " . $this->title, $head . $content);
-        }
-    }
-
-    public function sendCommentMail($comment)
-    {
-        $users = array_merge($this->reporters, $this->assignments);
-        foreach ($users as $user) {
-            $title = 'You has been assigned as';
-            if (in_array($user, $this->reporters) && in_array($user, $this->assignments)) {
-                $title .= ' Reporter and Developer ';
-            } else if (in_array($user, $this->reporters)) {
-                $title .= ' Reporter ';
-            } else if (in_array($user, $this->assignments)) {
-                $title .= ' Developer ';
-            }
-
-            $issue_url = env("APP_URL") . '/projects/' . $this->project_id . '/issues/' . $this->id . '/view';
-            $head = '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> ' . $title .
-                '(<a href="' . $issue_url . '">Visit issue</a>)</p>';
-            $head .= '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> Issue code: ' . $this->project->project_code . '-' . $this->id . '</p>';
-            $head .= '<p style="font-size:12pt;color:#000; padding: 0; margin: 0; width:100%; "> Issue title: ' . $this->title . '</p>';
-            send_mail(3, "[" . env("APP_NAME") . "] New issue created: " . $this->title, $head);
-        }
-    }
-
-    public function compair($old_version)
-    {
-        $compairs = [
-            'title' => "Title: ",
-            "url" => 'URL: ',
-            "status_name" => 'Status: ',
-            "due_date" => 'Due date: ',
-            "project_name" => 'Project: ',
-            "reporters_toString" => 'Reporters: ',
-            "assignments_toString" => 'Assignments: ',
-            "issue_description" => 'Issue description was changed</b>',
-        ];
-        $style = '<p style="font-size:12pt;color:#333; padding: 0; margin: 0; width:100%"> <span style="color: #333 !important; font-weight: bold;">';
-        $contents = [];
-        foreach ($compairs as $key => $value) {
-            if ($this->$key != $old_version->$key) {
-                if ($key == "issue_description")
-                    $contents[] = $style . $value . '</span>';
-                else
-                    $contents[] = $style . $value . '</span> <i style="color: #8c8c8c !important"> changed from </i>' . $old_version->$key . '<i style="color: #8c8c8c !important"> to </i>' . $this->$key . '</p>';
-            }
-        }
-        return implode('', $contents);
-    }
 
     public function Project()
     {

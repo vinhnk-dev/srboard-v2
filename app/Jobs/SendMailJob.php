@@ -12,10 +12,14 @@ use App\Models\Issue;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class SendMailJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public $tries = 3;
+    public $timeout = 30;
 
     protected $email;
     protected $title;
@@ -36,13 +40,27 @@ class SendMailJob implements ShouldQueue
      */
     public function handle()
     {
-        $email = $this->email;
-        if ($email) {
-            Mail::send([], [], function (Message $message) use ($email) {
-                $message->to($email);
-                $message->subject($this->title);
-                $message->text($this->content . "\n\n" . "~ Best regards ~");
-            });
+        if (!$this->email) {
+            throw new \InvalidArgumentException('Email is empty');
         }
+
+        Mail::send([], [], function (Message $message) {
+            $message->to($this->email);
+            $message->subject($this->title);
+            $message->html($this->content . "\n\n~ Best regards ~");
+        });
+    }
+
+    public function retryUntil()
+    {
+        return now()->addMinutes(5);
+    }
+
+    public function failed(\Throwable $exception)
+    {
+        Log::error('SendMailJob failed permanently', [
+            'email' => $this->email,
+            'error' => $exception->getMessage()
+        ]);
     }
 }
