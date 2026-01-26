@@ -295,4 +295,9 @@ class UserRepository extends BaseRepository
 
         return $user;
     }
+
+    public function getUserEmail($id)
+    {
+       return User::where('id', $id)->value('email');
+    }
 }

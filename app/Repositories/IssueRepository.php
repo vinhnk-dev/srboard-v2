@@ -95,10 +95,10 @@ class IssueRepository extends BaseRepository
         );
     }
 
-    public function issueImages($issue_id)
-    {
-        return IssuePicture::where("issue_id", "=", $issue_id)->get();
-    }
+    // public function issueImages($issue_id)
+    // {
+    //     return IssuePicture::where("issue_id",$issue_id)->get();
+    // }
 
     public function issueComments($issue_id)
     {
@@ -111,12 +111,13 @@ class IssueRepository extends BaseRepository
 
     public function issueAssigned($issue_id, $convertToStringList = false)
     {
-        $assigned = UserAssignment::select("users.*")
+        $users = UserAssignment::select("users.name")
             ->join("users", "users.id", "=", "user_assignments.user_id")
-            ->where("user_assignments.issue_id", "=", $issue_id)
+            ->where("user_assignments.issue_id", $issue_id)
             ->get();
-        if ($convertToStringList) return $this->toStringList($assigned, 'name', "Not assigned yet");
-        return $assigned;
+        if ($convertToStringList) return $this->toStringList($users, 'name', "Not set reporter yet");
+        return $users;
+
     }
 
     public function getReporter($issue_id, $convertToStringList = false)
@@ -129,42 +130,23 @@ class IssueRepository extends BaseRepository
         return $users;
     }
 
-    public function getUserAssign($issue_id)
+    public function getUserAssign($issueId)
     {
-        $assigned = UserAssignment::where('issue_id', '=', $issue_id)->get();
-        $users = User::all();
-        foreach ($users as $user) {
-            $user->active = "";
-            foreach ($assigned as $assign) {
-                if ($user->id == $assign->user_id) {
-                    $user->active = "selected";
-                    break;
-                }
-            }
-        }
-        return $users;
+        return UserAssignment::where('issue_id', $issueId)
+        ->pluck('user_id')
+        ->toArray();
     }
 
-    public function getUserReporter($issue_id)
+    public function getUserReporter($issueId)
     {
-        $assigned = AssignReporter::where('issue_id', '=', $issue_id)->get();
-        $users = User::all();
-        foreach ($users as $user) {
-            $user->active = "";
-            foreach ($assigned as $assign) {
-                if ($user->id == $assign->user_id) {
-                    $user->active = "selected";
-                    break;
-                }
-            }
-        }
-        return $users;
+        return AssignReporter::where('issue_id', $issueId)
+        ->pluck('user_id')
+        ->toArray();
     }
 
     public function getPitures($issue_id)
     {
-        return IssuePicture::where("issue_id", $issue_id)
-            ->get();
+        return IssuePicture::where("issue_id", $issue_id)->get();
     }
 
     public function getStatuses($project_id)
@@ -177,59 +159,28 @@ class IssueRepository extends BaseRepository
 
     public function create($attributes = [])
     {
-        $attributes['user_id'] = Auth::user()->id;
-        $attributes["project_id"] = request()->parentid;
-        $issue = parent::create($attributes);
-        if ($issue) {
-            $this->updateAssgined($issue->id);
-            $this->updateReporter($issue->id);
-            $this->updatePictures($issue->id);
-
-            $this->load_full_display_detail($issue);
-            //send email to reporter, assigned, author
-            $issue->sendCreatedMail();
-        }
-        return $issue;
+        return parent::create($attributes);
     }
 
     public function update($issue_id, $attributes = [])
     {
-        $issue_old = Issue::find($issue_id);
+        return parent::update($issue_id, $attributes);
+    }
 
-        $this->write_update_log($issue_old);
-        $this->load_full_display_detail($issue_old);
-
-        unset($attributes['user_id']);
-        if (!Auth::user()->hasRole('Admin')) unset($attributes['project_id']);
-        if (parent::update($issue_id, $attributes)) {
-            $issue = Issue::find($issue_id);
-
-            $this->updateAssgined($issue_id);
-            $this->updateReporter($issue_id);
-            $this->updatePictures($issue_id);
-
-            $this->load_full_display_detail($issue);
-
-            $html_changed = $issue->compair($issue_old);
-            //send email to reporter, assigned, author
-            $issue->sendUpdatedMail($html_changed);
-            //leave a comment about changed
-            Comment::create(['issue_id' => $issue_id, 'comment' => $html_changed, 'user_id' => Auth::user()->id]);
-        }
-        return $issue;
+    public function createUpdateComment($issueId, $comment, $userId)
+    {
+        return Comment::create(['issue_id' => $issueId, 'comment' => $comment, 'user_id' => $userId]);
     }
 
     public function updateStatus($issue_id, $attributes = [])
     {
-        $issue_old =  Issue::select("issues.*", "statuses.is_check_due")
-        ->join("statuses", "statuses.id", "issues.status")
-        ->where("issues.id", $issue_id)
-        ->first();
+        //snapshot 
 
-        $this->write_update_log($issue_old);
-        $this->load_full_display_detail($issue_old);
+        // process data 
         unset($attributes['user_id']);
         if (!Auth::user()->hasRole('Admin')) unset($attributes['project_id']);
+
+        //updateData
 
         if (parent::update($issue_id, $attributes)) {
             $issue = Issue::select("issues.*", "statuses.is_check_due")
@@ -248,10 +199,28 @@ class IssueRepository extends BaseRepository
         return $issue;
     }
 
-    public function updateSortIndex()
+    public function enrichIssueForResponse($issue, $old_issue = null)
     {
-        $position = request()->position;
-        foreach ($position as $key => $value) {
+        $this->load_full_display_detail($issue);
+        $issue->deadline = $issue->deadline();
+
+        if ($old_issue) {
+            $issue->oldDeadline = $old_issue->deadline();
+        }
+        return $issue;
+    }
+
+    public function getIssueAndStatus($id)
+    {
+        return  Issue::select("issues.*", "statuses.is_check_due")
+        ->join("statuses", "statuses.id", "issues.status")
+        ->where("issues.id", $id)
+        ->first();
+    }
+
+    public function updateSortIndex($positions)
+    {
+        foreach ($positions as $key => $value) {
             Issue::where("id", $value)
                 ->update([
                     "order_by" => $key
@@ -259,52 +228,69 @@ class IssueRepository extends BaseRepository
         }
     }
 
-    public function updateAssgined($issue_id)
+    public function updateAssigned($issue_id, $assigned)
     {
-        if (request()->has("user_assign")) {
-            $assigned = request()->input("user_assign");
-            $existingAssigned = UserAssignment::where("issue_id", $issue_id)->pluck("user_id")->toArray();
+        $existingAssigned = UserAssignment::where("issue_id", $issue_id)->pluck("user_id")->toArray();
 
-            UserAssignment::where("issue_id", $issue_id)
-                ->whereIn("user_id", array_diff($existingAssigned, $assigned))->delete();
+        UserAssignment::where("issue_id", $issue_id)
+            ->whereIn("user_id", array_diff($existingAssigned, $assigned))->delete();
 
-            foreach (array_diff($assigned, $existingAssigned) as $assignee) {
-                UserAssignment::create(["issue_id" => $issue_id, "user_id" => $assignee]);
+        foreach (array_diff($assigned, $existingAssigned) as $assignee) {
+            UserAssignment::create(["issue_id" => $issue_id, "user_id" => $assignee]);
+        }
+    }
+
+    public function updateReporter($issue_id, $reporterAssigned)
+    {
+        $existingAssigned = AssignReporter::where("issue_id", $issue_id)->pluck("user_id")->toArray();
+
+        AssignReporter::where("issue_id", $issue_id)
+            ->whereIn("user_id", array_diff($existingAssigned, $reporterAssigned))->delete();
+
+        foreach (array_diff($reporterAssigned, $existingAssigned) as $assignee) {
+            AssignReporter::create(["issue_id" => $issue_id, "user_id" => $assignee]);
+        }
+    }
+
+    public function updatePictures(int $issueId, array $keepUrls = [], array $newFiles = []): void
+    {
+        if (!empty($keepUrls)) {
+            $this->deleteUnusedPictures($issueId, $keepUrls);
+        }
+        
+        if (!empty($newFiles)) {
+            $this->saveNewPictures($issueId, $newFiles);
+        }
+    }
+
+    private function deleteUnusedPictures(int $issueId, array $keepUrls): void
+    {
+        $picturesToDelete = IssuePicture::where('issue_id', $issueId)
+            ->whereNotIn('picture_url', $keepUrls)
+            ->get();
+        
+        $publicPath = public_path() . '/';
+        
+        foreach ($picturesToDelete as $picture) {
+            $filePath = $publicPath . $picture->picture_url;
+            
+            if (file_exists($filePath) && @unlink($filePath)) {
+                $picture->delete();
+            } elseif (!file_exists($filePath)) {
+                $picture->delete();
             }
         }
     }
 
-    public function updateReporter($issue_id)
+    private function saveNewPictures(int $issueId, array $files): void
     {
-        if (request()->has("report_assign")) {
-            $reporterAssigned = request()->input("report_assign");
-            $existingAssigned = AssignReporter::where("issue_id", $issue_id)->pluck("user_id")->toArray();
-
-            AssignReporter::where("issue_id", $issue_id)
-                ->whereIn("user_id", array_diff($existingAssigned, $reporterAssigned))->delete();
-
-            foreach (array_diff($reporterAssigned, $existingAssigned) as $assignee) {
-                AssignReporter::create(["issue_id" => $issue_id, "user_id" => $assignee]);
-            }
-        }
-    }
-
-    public function updatePictures($issue_id)
-    {
-        if (request()->has("pic_url")) {
-            $keep = request()->input("pic_url");
-            $olds = IssuePicture::where("issue_id", $issue_id)->whereNotIn("picture_url", $keep)->get();
-            $publicPath = public_path() . '/';
-            foreach ($olds as $old) if (unlink($publicPath . $old->picture_url)) $old->delete();
-        }
-        if (request()->has("picture_url")) {
-            $uploaded = request()->file("picture_url");
-            $path = "images/issue/";
-            $idata = ["issue_id" => $issue_id];
-            foreach ($uploaded as $image) {
-                $idata["picture_url"] = save_upload_file($image, $path);
-                IssuePicture::create($idata);
-            }
+        $path = 'images/issue/';
+        
+        foreach ($files as $file) {
+            IssuePicture::create([
+                'issue_id' => $issueId,
+                'picture_url' => save_upload_file($file, $path)
+            ]);
         }
     }
 
@@ -355,30 +341,18 @@ class IssueRepository extends BaseRepository
     }
     public function comment($attributes = [])
     {
-        $attributes['user_id'] = Auth::user()->id;
-        $attributes["issue_id"] = request()->id;
-
-        $comment = parent::create($attributes);
-        if ($comment) {
-            $issue = Issue::find(request()->id);
-            $this->load_full_display_detail($issue);
-            $issue->sendCommentMail($comment);
-        }
-        return $comment;
+        return Comment::create($attributes);
     }
 
-    public function pageLeftTools($theme)
+    public function createChangeComment(int $issueId, string $changes,$userId)
     {
-        $tools = '';
-        if ($theme == 'agile') {
-            $tools .= '<a href="/projects/' . request()->parentid . '/issues?theme=issues" class="btn btn-sm btn-danger text-white">Grid Board</a>
-            <button type="button" class="btn btn-sm btn-gray text-white ml-1" disabled >Agile board</button>';
-        } else {
-            $tools .= '<button type="button" class="btn btn-sm btn-gray text-white" disabled>Grid Board</button>
-            <a href="/projects/' . request()->parentid . '/issues?theme=agile" class="btn btn-sm btn-danger text-white ml-1">Agile board</a>';
-        }
-        return $tools;
+        Comment::create([
+            'issue_id' => $issueId,
+            'comment' => $changes,
+            'user_id' => $userId
+        ]);
     }
+
 
     public function usersAssigned()
     {
