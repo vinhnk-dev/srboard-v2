@@ -10,4 +10,5 @@ interface BaseServiceInterface
     public function restore($id);
     public function forcesDelete($id);
     public function find($id);
+    public function search($trash = false, $query = null, $rowlimit = true);
 }

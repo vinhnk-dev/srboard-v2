@@ -108,5 +108,9 @@ class BaseService implements BaseServiceInterface
         $response->headers->set('Content-Disposition', 'attachment; filename="SR_Board.xlsx"');
         $response->send();
     }
+    public function search($trash = false, $query = null, $rowlimit = true)
+    {
+        return $this->repository->search($trash, $query, $rowlimit);
+    }
     
 }

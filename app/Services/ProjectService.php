@@ -119,7 +119,12 @@ class ProjectService extends BaseService
 
     public function isProjectCodeExists(string $code, ?int $exceptId = null): bool
     {
-        return $this->projectRepo->existsByCode($code, $exceptId);
+        return $this->projectRepository->existsByCode($code, $exceptId);
+    }
+
+    public function getStatuses($id)
+    {
+        return $this->projectRepository->getStatuses($id);
     }
 
 }
