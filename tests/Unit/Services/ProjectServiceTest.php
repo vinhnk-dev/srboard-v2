@@ -5,6 +5,7 @@ namespace Tests\Unit\Services;
 use PHPUnit\Framework\TestCase;
 use App\Services\ProjectService;
 use App\Repositories\ProjectRepository;
+use App\Repositories\GroupRepository;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Mockery;
@@ -15,13 +16,15 @@ class ProjectServiceTest extends TestCase
 
     protected ProjectRepository $projectRepository;
     protected ProjectService $projectService;
+    protected GroupRepository $groupRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->projectRepository = Mockery::mock(ProjectRepository::class);
-        $this->projectService = new ProjectService($this->projectRepository);
+        $this->groupRepository = Mockery::mock(GroupRepository::class);
+        $this->projectService = new ProjectService($this->projectRepository,$this->groupRepository);
     }
 
     protected function tearDown(): void
