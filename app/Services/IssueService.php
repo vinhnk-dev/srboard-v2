@@ -146,7 +146,7 @@ class IssueService extends BaseService
             $keepUrls = $data['pic_url'] ?? [];
             $newFiles = $data['picture_url'] ?? [];
             $data = $this->sanitize($data);
-            $oldIssue = $this->issueRepository->find($issueId)->replicate();
+            $oldIssue = $this->issueRepository->find($issueId);
 
            $newIssue = $this->issueRepository->update($issueId, $data);
            if($newIssue)
@@ -289,9 +289,12 @@ class IssueService extends BaseService
         $data['picture_url'],
         $data['user_id']);
 
-        if (!Auth::user()->hasRole('Admin')) {
+        $user = Auth::user();
+
+        if (!$user || !$user->hasRole('Admin')) {
             unset($data['project_id']);
         }
+
 
         return $data;
     }

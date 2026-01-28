@@ -113,7 +113,6 @@ class IssueController extends Controller
 
     public function update($parentId, $id, IssueRequest $request)
     {
-        // $id = request()->id;
         $validatedData = $request->validated();
         $issue = $this->issueService->update($id, $validatedData);
 
@@ -145,7 +144,6 @@ class IssueController extends Controller
     }
 
     public function comment(CommentRequest $request){
-        // $validated_data = $this->validate($request, $this->repo->rules());
         $validatedData = $request->validated();
         
         $this->issueService->comment($validatedData);

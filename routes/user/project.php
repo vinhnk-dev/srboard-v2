@@ -27,7 +27,7 @@ foreach ($modals as $modal => $v) {
     Route::get('/'.$v['parent'] . '/{parentid}/' . $modal . '/{id}/deleteforce', [$v['controller'], 'forcesDelete'])->name($modal . ".deleteforce");
 
     Route::post('/'.$v['parent'] . '/{parentid}/' . $modal . '/create', [$v['controller'], 'store'])->name($modal . '.store');
-    Route::post('/'.$v['parent'] . '/{parentid}/' . $modal . '/{id}', [$v['controller'], 'store'])->name($modal . '.update');
+    Route::post('/'.$v['parent'] . '/{parentid}/' . $modal . '/{id}', [$v['controller'], 'update'])->name($modal . '.update');
     Route::post('/'.$v['parent'] . '/{parentid}/' . $modal . '/{id}/comment', [$v['controller'], 'comment'])->name($modal . '.comment');
     Route::post('/'.$v['parent'] . '/{parentid}/' . $modal . '/comment/{id}', [$v['controller'], 'comment_edit'])->name($modal . '.comment.edit');
     Route::post('/'.$v['parent'] . '/{parentid}/' . $modal . '/comment/{id}/delete', [$v['controller'], 'comment_delete'])->name($modal . '.comment.delete');

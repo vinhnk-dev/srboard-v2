@@ -17,27 +17,29 @@ class IssueMailService
         $this->issueRepository = $issueRepository;
         $this->userRepository = $userRepository;
     }
+    
     public function sendCreatedMail($issueId): void
     {
         $issue = $this->issueRepository->find($issueId);
-        $issue->loadMissing('project:id,project_code');
         $assigners = $this->issueRepository->getUserAssign($issueId);
         $reporters = $this->issueRepository->getUserReporter($issueId);
 
-        $users = array_merge($reporters, $assigners);
+        $users = array_unique(array_merge($reporters, $assigners));
         
         foreach ($users as $user_id) {
-            $title = 'You have been assigned as';
+            $roles = [];
+
+            if (in_array($user_id, $reporters)) {
+                $roles[] = 'Reporter';
+            }
+
+            if (in_array($user_id, $assigners)) {
+                $roles[] = 'Developer';
+            }
+
+            $title = 'You have been assigned as ' . implode(' and ', $roles);
 
             $userMail = $this->userRepository->getUserEmail($user_id);
-
-            if (in_array($user_id, $reporters) && in_array($user_id, $assigners)) {
-                $title .= ' Reporter and Developer ';
-            } elseif (in_array($user_id, $reporters)) {
-                $title .= ' Reporter ';
-            } elseif (in_array($user_id, $assigners)) {
-                $title .= ' Developer ';
-            }
 
             $issue_url = env('APP_URL') . '/projects/' . $issue->project_id . '/issues/' . $issue->id . '/view';
 
@@ -65,24 +67,25 @@ class IssueMailService
     public function sendUpdatedMail($issueId, string $content): void
     {
         $issue = $this->issueRepository->find($issueId);
-        $issue->loadMissing('project:id,project_code');
         $assigners = $this->issueRepository->getUserAssign($issueId);
         $reporters = $this->issueRepository->getUserReporter($issueId);
 
-        $users = array_merge($reporters, $assigners);
+        $users = array_unique(array_merge($reporters, $assigners));
 
         foreach ($users as $user_id) {
-            $userMail = $this->userRepository->getUserEmail($user_id);
-            
-            $title = 'You has been assigned as';
+                       $roles = [];
 
-            if (in_array($user_id, $reporters) && in_array($user_id, $assigners)) {
-                $title .= ' Reporter and Developer ';
-            } elseif (in_array($user_id, $reporters)) {
-                $title .= ' Reporter ';
-            } elseif (in_array($user_id, $assigners)) {
-                $title .= ' Developer ';
+            if (in_array($user_id, $reporters)) {
+                $roles[] = 'Reporter';
             }
+
+            if (in_array($user_id, $assigners)) {
+                $roles[] = 'Developer';
+            }
+
+            $title = 'You have been assigned as ' . implode(' and ', $roles);
+
+            $userMail = $this->userRepository->getUserEmail($user_id);
 
             $issue_url = env('APP_URL') . '/projects/' . $issue->project_id . '/issues/' . $issue->id . '/view';
 
