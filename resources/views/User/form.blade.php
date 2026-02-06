@@ -29,7 +29,7 @@
                                 @else
                                     <h4 class="title nk-block-title mb-4">CREATE NEW USER</h4>
                                 @endif
-                                <form action="{{route('admin.users.store')}}"
+                                <form action="{{$form_action}}"
                                     class="gy-3" method="POST" enctype="multipart/form-data">
                                     @method('POST')
                                     @csrf

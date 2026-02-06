@@ -5,7 +5,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/profile', [UserController::class, 'show'])->name('user.profile');
 Route::get('/profile/{mode}', [UserController::class, 'profile'])->name('user.profile_edit');
-Route::post('/profile', [UserController::class, 'store'])->name('user.edit_submit');
+Route::post('/profile/{id}', [UserController::class, 'updateProfile'])->name('user.profile.update');
 
 Route::get('/notice/{id}/view', [BoardController::class, 'view'])->name("notice.view");
 Route::post('/notice/{id}/view/comment', [BoardController::class, 'comment'])->name("notice.comment");

@@ -34,7 +34,7 @@
                                 </div>
                                 @if(isset($mode) && $mode=='edit')
                                     <!-----EDIT----->
-                                    <form action="{{route('user.edit_submit')}}" class="gy-3" method="POST" id='form1' enctype="multipart/form-data">
+                                    <form action="{{$form_action}}" class="gy-3" method="POST" id='form1' enctype="multipart/form-data">
                                         @csrf
                                         @Method('POST')
                                         <input type="hidden" name="id" value="{{Auth::user()->id}}">
