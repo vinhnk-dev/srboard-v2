@@ -8,6 +8,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Repositories\UserRepository;
 use App\Repositories\GroupRepository;
+use App\Http\Requests\UserRequest;
+use App\Http\Requests\Auth\ProfileUpdateRequest;
+use App\Http\Requests\Auth\LoginRequest;
+use App\Services\UserService;
+use App\Services\UserProfileService;
 
 
 class UserController extends Controller
@@ -15,20 +20,27 @@ class UserController extends Controller
     protected $repo;
     protected $groupRepository;
     protected $roleModel;
+    protected $userService;
+    protected $userProfileService;
 
     public function __construct(
         UserRepository $repo,
         GroupRepository $groupRepository,
-        Role $roleModel
+        Role $roleModel,
+        UserService $userService,
+        UserProfileService $userProfileService
     ) {
         parent::__construct($repo,$repo);
         $this->groupRepository = $groupRepository;
         $this->roleModel = $roleModel;
+        $this->userService = $userService;
+        $this->userProfileService = $userProfileService;
     }
 
     public function create()
     {
         $this->context['group'] = $this->groupRepository->all();
+        $this->context['form_action'] = route('admin.users.store');
         return parent::create();
     }
 
@@ -36,6 +48,7 @@ class UserController extends Controller
     {
         $this->context['user']  = $this->repo->find($id);
         $this->context['group']  = $this->groupRepository->all($id);
+        $this->context['form_action'] = route('admin.users.update', ['id' => request()->id]);
         return parent::edit($id);
     }
 
@@ -51,11 +64,12 @@ class UserController extends Controller
         $userid = Auth::user()->id;
         $this->context['group'] = $this->repo->myGroups($userid, true);
         $this->context['mode'] = $mode;
+        $this->context['form_action'] = route('user.profile.update', ['id' => $userid]);
         return parent::customView("User.view");
     }
     public function delete($id)
     {
-        return parent::delete($id);
+        return $this->userService->delete($id);
     }
     public function forcesDelete($id)
     {
@@ -63,78 +77,26 @@ class UserController extends Controller
         return parent::forcesDelete($id);
     }
 
-    public function store(Request $request)
+    public function store(UserRequest $request)
     {
-        $request->validate([
-            "name" => ["required", "string", "max:255"],
-            "email" => ["required", "string"],
-        ]);
-        $userData = [
-            "name" => $request->name,
-            "email" => $request->email,
-        ];
-
-        $user = $this->repo->find($request->input('id'));
-
-        if ($user) {
-            if ($request->input('isUser')) {
-                if (!empty($request->input("password"))) {
-                    $password = bcrypt($request->input("password"));
-                    $userData = [
-                        "name" => $request->name,
-                        "email" => $request->email,
-                        "password" => $password,
-                    ];
-                }
-                if ($request->hasFile('avatar')) {
-                    $avatarFile = $request->file('avatar');
-                    $user = $this->repo->updateAvatar($user, $avatarFile);
-                }
-                $this->repo->updateUser($user->id, $userData);
-                return redirect()->route('index');
-            } else {
-                $groupIds = $request->input("user_group_id") ?? [];
-                $roleNames = $request->input("role") ?? [];
-
-                if (!empty($request->input("password"))) {
-                    $password = bcrypt($request->input("password"));
-                    $userData = [
-                        "name" => $request->name,
-                        "email" => $request->email,
-                        "password" => $password,
-                        "active" => $request->active ? 1 : 0,
-                    ];
-                } else {
-                    $userData = [
-                        "name" => $request->name,
-                        "email" => $request->email,
-                        "active" => $request->active ? 1 : 0,
-                    ];
-                }
-                $this->repo->updateUser($user->id, $userData);
-                $this->repo->manageUserGroups($user->id, $groupIds);
-                $this->repo->manageUserRoles($user, $roleNames);
-            }
-        } else {
-            $request->validate([
-                "username" => ["required", "string", "max:255", "unique:" . $this->repo->getModel()],
-                "password" => ["required"],
-                "name" => ["required"],
-            ]);
-            $userData = [
-                "username" => $request->username,
-                "password" => $request->password,
-                "name" => $request->name,
-                "email" => $request->email,
-            ];
-
-
-            $groupIds = $request->input("user_group_id") ?? [];
-            $roleNames = $request->input("role") ?? [];
-            $user = $this->repo->createUser($userData, $groupIds, $roleNames);
-        }
-
+       $validatedData = $request->validated();
+       $this->userService->create($validatedData);
+        
         return redirect()->route('admin.users.index');
+    }
+
+    public function update ($id, UserRequest $request)
+    {
+        $validatedData = $request->validated();
+        $this->userService->update($id,$validatedData); 
+        return redirect()->route('admin.users.index');  
+    }
+ 
+    public function updateProfile($id, ProfileUpdateRequest $request)
+    {
+        $validatedData = $request->validated();
+        $this->userProfileService->profileUpdate($id,$validatedData);
+        return redirect()->route('index');
     }
 
     public function login()
@@ -142,12 +104,9 @@ class UserController extends Controller
         return view("User.login");
     }
 
-    public function login_submit(Request $request)
+    public function login_submit(LoginRequest $request)
     {
-        $login = [
-            "username" => $request->username,
-            "password" => $request->password,
-        ];
+        $login = $request->validated();
 
         if (Auth::attempt($login)) {
             $user = Auth::user();

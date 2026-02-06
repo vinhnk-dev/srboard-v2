@@ -153,7 +153,7 @@ class UserRepository extends BaseRepository
 
 
 
-    public function createUser(array $userData, array $groupIds, $roleNames)
+    public function createUser(array $userData)
     {
         $user = $this->model->create([
             'username' => $userData['username'],
@@ -163,54 +163,24 @@ class UserRepository extends BaseRepository
             'active' => isset($userData['active']) ? 1 : 0,
         ]);
 
-        if ($user->id && !empty($groupIds)) {
-            foreach ($groupIds as $groupId) {
-                $data = [
-                    'user_id' => $user->id,
-                    'group_id' => $groupId,
-                ];
-                UserGroup::create($data);
-            }
-        }
-
-
-        $this->sendWelcomeEmail($userData);
-
-        $this->assignRole($user, $roleNames);
-
         return $user;
     }
 
-    public function sendWelcomeEmail(array $userData)
+    public function assignGroup($userId, $groupIds)
     {
-        $email = $userData['email'];
-
-        Mail::send([], [], function (Message $message) use ($email, $userData) {
-            $message->to($email);
-            $message->subject("Welcome to MA-board");
-            $message->text(
-                "Welcome to MA-board, " .
-                    $userData['name'] .
-                    "\n\n" .
-                    "Here is your account information to login:" .
-                    "\n" .
-                    "URL: " . env("APP_URL") .
-                    "\n" .
-                    "Username: " .
-                    $userData['username'] .
-                    "\n" .
-                    "Password: " .
-                    $userData['password'] .
-                    "\n\n" .
-                    "Remember to change your password." .
-                    "\n" .
-                    "~ Best regards ~"
-            );
-        });
+        foreach ($groupIds as $groupId) {
+            $data = [
+                'user_id' => $userId,
+                'group_id' => $groupId,
+            ];
+            UserGroup::create($data);
+        }
     }
 
-    public function assignRole(User $user, $roleName)
+
+    public function assignRole($userId, $roleName)
     {
+        $user = User::find($userId);
         $permissions = Permission::all();
         $role = Role::where('name', $roleName)->first();
 
@@ -221,6 +191,7 @@ class UserRepository extends BaseRepository
         $role->syncPermissions($permissions);
         $user->assignRole($role);
     }
+
 
     public function updateUser($id, $userData)
     {
@@ -242,8 +213,9 @@ class UserRepository extends BaseRepository
         }
     }
 
-    public function manageUserRoles($user, $roleName)
+    public function manageUserRoles($userId, $roleName)
     {
+        $user = User::find($userId);
         $permissions = Permission::all();
         $user->syncRoles([]);
         $role = Role::where('name', $roleName)->first();
@@ -254,47 +226,6 @@ class UserRepository extends BaseRepository
         $user->assignRole($role);
     }
 
-    public function sendPasswordResetEmail($user, $newPassword)
-    {
-        $email = $user->email;
-
-        Mail::send([], [], function (Message $message) use ($email, $newPassword) {
-            $message->to($email);
-            $message->subject("Your password has been reset!");
-            $message->text(
-                "Your password has been reset.\n" .
-                    "Here is your new password: " . $newPassword .
-                    "\n\n" .
-                    "URL: " . env("APP_URL") .
-                    "\n\n" .
-                    "If you have any problem, please contact the administrator for support."
-            );
-        });
-    }
-
-    public function updateAvatar($user, $avatarFile)
-    {
-        if ($avatarFile) {
-            $path = "images/avatar/" . $user->avatar;
-            if (file_exists($path)) {
-                @unlink($path);
-            }
-
-            $get_name_image = $avatarFile->getClientOriginalName();
-            $path = "images/avatar/";
-            $name_image = current(explode(".", $get_name_image));
-            $new_image =
-                $name_image .
-                rand(0, 99) .
-                "." .
-                $avatarFile->getClientOriginalExtension();
-            $avatarFile->move($path, $new_image);
-            $user->avatar = $path . $new_image;
-        }
-        $user->save();
-
-        return $user;
-    }
 
     public function getUserEmail($id)
     {
