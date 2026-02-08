@@ -1,66 +1,46 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# SR Board Refactor (v2)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This repository demonstrates a **real-world architectural refactor** of a production Laravel application from legacy MVC + Repository pattern to a clean **3-layer architecture** (Controller → Service → Repository).  
 
-## About Laravel
+The focus is on building a solid foundation for long-term maintainability and future development, rather than performance optimizations, security fixes, or full rewrites.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+### Project Background
+As core backend developer, I built and maintained this Laravel application from scratch through multiple iterations. It served an internal team of ~30 users with various features and modules.  
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+The codebase had already undergone one refactor (to MVC-like CMS structure + Repository pattern). I took it further to full 3-layer architecture to improve separation of concerns, reduce technical debt accumulation, and make adding new features easier without disrupting existing functionality.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Goals of the Refactor
+- Centralize business logic in a dedicated **Service layer** (no more scattered rules in controllers or models).
+- Isolate data access in **Repositories** for easier swapping (e.g., MySQL to external API) or testing.
+- Eliminate God Models by extracting rendering/formatting logic where possible.
+- Apply **SOLID principles** pragmatically (especially SRP – Single Responsibility Principle).
+- Adopt a **gradual and pragmatic approach**: Improve incrementally (later features benefit from lessons learned from earlier ones), follow "if it's good, don't touch it" for stable parts (e.g., rendering logic handled by previous mentor – minimal changes to avoid risk).
+- Prepare the codebase for future evolution (e.g., adding DTOs, caching, events, or new patterns) without major disruptions.
 
-## Learning Laravel
+### Key Architectural Changes (Before vs After)
+- **Before**: Fat controllers/models, business logic mixed across layers, harder to test/maintain.
+- **After**:
+  - Slim controllers: Only handle HTTP requests/responses.
+  - Service layer: Orchestrates business rules and workflows.
+  - Repositories: Pure data operations (queries, persistence).
+  - Rendering/formatting extracted to dedicated services where refactored (ongoing for remaining parts).
+  - Improved clarity of responsibilities per SOLID.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### Tech Stack
+- Laravel (compatible with 9/10/11/12)
+- PHP 8+
+- MySQL
+- Tailwind CSS + Vite (for assets)
+- PHPUnit (tests for critical services/business logic)
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
-
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-## Laravel Sponsors
-
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
-
-### Premium Partners
-
--   **[Vehikl](https://vehikl.com/)**
--   **[Tighten Co.](https://tighten.co)**
--   **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
--   **[64 Robots](https://64robots.com)**
--   **[Cubet Techno Labs](https://cubettech.com)**
--   **[Cyber-Duck](https://cyber-duck.co.uk)**
--   **[Many](https://www.many.co.uk)**
--   **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
--   **[DevSquad](https://devsquad.com)**
--   **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
--   **[OP.GG](https://op.gg)**
--   **[WebReinvent](https://webreinvent.com/?utm_source=laravel&utm_medium=github&utm_campaign=patreon-sponsors)**
--   **[Lendio](https://lendio.com)**
-
-## Contributing
-
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
-
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+### How to Run Locally
+```bash
+git clone https://github.com/vinhnk-dev/srboard-v2.git
+cd srboard-v2
+composer install
+cp .env.example .env
+php artisan key:generate
+# Configure .env (DB, etc.)
+php artisan migrate --path=config/migrations
+php artisan db:seed
+php artisan serve
