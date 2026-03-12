@@ -75,6 +75,11 @@ class UserService extends BaseService
         });
     }
 
+    public function forceDeleteRelationship($id)
+    {
+        return $this->userRepository->forceDeleteRelationship($id);
+    }
+
 
 
 }

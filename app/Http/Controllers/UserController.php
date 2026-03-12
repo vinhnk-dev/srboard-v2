@@ -67,13 +67,15 @@ class UserController extends Controller
         $this->context['form_action'] = route('user.profile.update', ['id' => $userid]);
         return parent::customView("User.view");
     }
+
     public function delete($id)
     {
         return $this->userService->delete($id);
     }
+
     public function forcesDelete($id)
     {
-        $this->context["user"] = $this->repo->forceDeleteRelationship($id);
+        $this->context["user"] = $this->userService->forceDeleteRelationship($id);
         return parent::forcesDelete($id);
     }
 

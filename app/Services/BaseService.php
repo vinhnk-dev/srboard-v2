@@ -3,6 +3,8 @@ namespace App\Services;
 
 use App\Services\Contracts\BaseServiceInterface;
 use App\Repositories\BaseRepositoryInterface;
+use Dompdf\Dompdf;
+use PDF;
 
 
 class BaseService implements BaseServiceInterface
