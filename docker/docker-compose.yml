@@ -1,0 +1,78 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: srboard_app
+    volumes:
+      - .:/var/www
+    depends_on:
+      - db
+      - redis
+    networks:
+      - srboard
+
+  nginx:
+    image: nginx:alpine
+    container_name: srboard_nginx
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+    networks:
+      - srboard
+
+  db:
+    image: mysql:8.0
+    container_name: srboard_db
+    environment:
+      MYSQL_DATABASE: srboard
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_USER: srboard_user
+      MYSQL_PASSWORD: secret
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - srboard
+
+  redis:
+    image: redis:alpine
+    container_name: srboard_redis
+    networks:
+      - srboard
+
+  queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+    container_name: srboard_queue
+    command: php artisan queue:work --sleep=3 --tries=3
+    volumes:
+      - .:/var/www
+    depends_on:
+      - db
+      - redis
+    networks:
+      - srboard
+
+  mailhog:
+    image: mailhog/mailhog
+    container_name: srboard_mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - srboard
+
+networks:
+  srboard:
+    driver: bridge
+
+volumes:
+  db_data:
